@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://tarjem-backend.onrender.com/api/:path*"
+      "destination": "http://149.28.124.90/api/:path*"
     },
     {
       "source": "/((?!assets/).*)",

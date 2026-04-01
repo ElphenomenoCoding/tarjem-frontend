@@ -1,0 +1,24 @@
+{
+  "buildCommand": "npx ng build --configuration production",
+  "outputDirectory": "dist/tarjem-frontend/browser",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://tarjem-backend.onrender.com/api/:path*"
+    },
+    {
+      "source": "/((?!assets/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/v1/notifications/stream",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Connection", "value": "keep-alive" }
+      ]
+    }
+  ]
+}

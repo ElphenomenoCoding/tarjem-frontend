@@ -8,6 +8,7 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
 import { LanguageSwitcherComponent } from '../../../shared/components/language-switcher/language-switcher.component';
 import { TranslateLangPipe } from '../../../shared/pipes/translate-lang.pipe';
 import type { SelectOption } from '../../../shared/components/select/select.component';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 const WILAYAS: SelectOption[] = [
   { value: '01', label: 'Adrar' },
@@ -522,6 +523,7 @@ export class RegisterClientComponent {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   loading = signal(false);
   showPassword = signal(false);
@@ -562,6 +564,7 @@ export class RegisterClientComponent {
       if (control.invalid) valid = false;
     }
     if (valid) {
+      this.analytics.track('register_client_step2');
       this.currentStep.set(2);
     }
   }
@@ -573,10 +576,12 @@ export class RegisterClientComponent {
     }
 
     this.loading.set(true);
+    this.analytics.track('register_client_submitted', { wilaya: this.form.getRawValue().wilaya });
 
     this.authService.registerClient(this.form.getRawValue()).subscribe({
       next: () => {
         this.loading.set(false);
+        this.analytics.track('register_client_succeeded');
         this.toast.success(this.transloco.translate('auth.registerClient.success'));
         const savedEstimate = localStorage.getItem('tarjem_estimate');
         if (savedEstimate) {
@@ -593,6 +598,7 @@ export class RegisterClientComponent {
       },
       error: (err) => {
         this.loading.set(false);
+        this.analytics.track('register_client_failed', { error: err?.error?.message });
         const message = err?.error?.message || this.transloco.translate('auth.registerClient.error');
         this.toast.error(message);
       },

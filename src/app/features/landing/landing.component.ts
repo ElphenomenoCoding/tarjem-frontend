@@ -7,6 +7,7 @@ import { TranslocoModule } from '@jsverse/transloco';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageSwitcherComponent } from '../../shared/components/language-switcher/language-switcher.component';
 import { TranslateLangPipe } from '../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../core/services/analytics.service';
 
 interface CascadeTarget { name: string; countryCode: string; }
 interface CascadeLanguage { name: string; countryCode: string; targets: CascadeTarget[]; }
@@ -751,6 +752,7 @@ export class LandingComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
+  private readonly analytics = inject(AnalyticsService);
 
   readonly currentYear = new Date().getFullYear();
   scrolled = false;
@@ -875,6 +877,7 @@ export class LandingComponent implements OnInit {
         const data = res?.data ?? res;
         this.quote.set(data);
         this.calculating.set(false);
+        this.analytics.track('landing_estimate_calculated', { source: this.selectedSource, target: this.selectedTarget, pages: this.pageCount, price: data?.totalPrice });
       },
       error: () => {
         this.calculating.set(false);
@@ -898,6 +901,7 @@ export class LandingComponent implements OnInit {
 
   orderNow(): void {
     this.saveEstimate();
+    this.analytics.track('landing_order_now', { source: this.selectedSource, target: this.selectedTarget, price: this.quote()?.totalPrice });
 
     const role = this.authService.userRole();
     if (role === 'CLIENT') {
@@ -910,13 +914,13 @@ export class LandingComponent implements OnInit {
 
   goToRegister(): void {
     this.saveEstimate();
-
+    this.analytics.track('landing_go_to_register');
     this.router.navigate(['/auth/register']);
   }
 
   goToLogin(): void {
     this.saveEstimate();
-
+    this.analytics.track('landing_go_to_login');
     this.router.navigate(['/auth/login']);
   }
 }

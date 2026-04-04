@@ -10,6 +10,7 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslateLangPipe } from '../../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 interface OrderData { id: string; documentType: string; sourceLanguage: string; targetLanguage: string; tier: string; status: string; totalPrice: number; translatorAmount: number; pageCount: number; clientNotes: string; deliveryType: string; urgency: string; createdAt: string; estimatedDeliveryDate: string; translatorId: string; currentVersion: number; }
 interface DocInfo { id: string; type: string; fileName: string; fileSize: number; mimeType: string; createdAt: string; submissionVersion: number; isFinal: boolean; }
 interface HistoryEntry { fromStatus: string; toStatus: string; changedAt: string; reason: string; changedByRole: string; }
@@ -277,6 +278,7 @@ export class TranslatorWorkspaceComponent implements OnInit {
   private readonly location = inject(Location);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
   loading = signal(true);
   order = signal<OrderData | null>(null);
   sourceDocs = signal<DocInfo[]>([]);
@@ -328,6 +330,7 @@ export class TranslatorWorkspaceComponent implements OnInit {
   uploadAllTranslations() {
     const files = this.selectedFiles();
     if (files.length === 0) return;
+    this.analytics.track('translator_translation_uploaded', { fileCount: this.selectedFiles().length });
     this.uploading.set(true);
     this.uploadSequentially(files, 0);
   }
@@ -351,7 +354,7 @@ export class TranslatorWorkspaceComponent implements OnInit {
 
   deleteDocument(docId: string) {
     this.api.delete('/api/v1/translator/orders/' + this.orderId + '/documents/' + docId).subscribe({
-      next: () => { this.loadDocuments(); this.toast.success(this.transloco.translate('ws.docDeleted')); },
+      next: () => { this.loadDocuments(); this.toast.success(this.transloco.translate('ws.docDeleted')); this.analytics.track('translator_document_deleted'); },
       error: (err: HttpErrorResponse) => this.toast.error(err.error?.message || this.transloco.translate('common.error')),
     });
   }
@@ -359,7 +362,7 @@ export class TranslatorWorkspaceComponent implements OnInit {
   submitForReview() {
     this.showSubmitDialog.set(false);
     this.api.patch('/api/v1/translator/orders/' + this.orderId + '/submit').subscribe({
-      next: () => { this.order.update(o => o ? { ...o, status: 'PENDING_REVIEW' } : o); this.toast.success(this.transloco.translate('ws.submitSuccess')); },
+      next: () => { this.order.update(o => o ? { ...o, status: 'PENDING_REVIEW' } : o); this.toast.success(this.transloco.translate('ws.submitSuccess')); this.analytics.track('translator_submitted_for_review'); },
       error: (err: HttpErrorResponse) => this.toast.error(err.error?.message || this.transloco.translate('common.error')),
     });
   }
@@ -367,7 +370,7 @@ export class TranslatorWorkspaceComponent implements OnInit {
   cancelReview() {
     this.showCancelReviewDialog.set(false);
     this.api.patch('/api/v1/translator/orders/' + this.orderId + '/cancel-review').subscribe({
-      next: () => { this.order.update(o => o ? { ...o, status: 'IN_PROGRESS' } : o); this.toast.success(this.transloco.translate('ws.cancelReviewSuccess')); },
+      next: () => { this.order.update(o => o ? { ...o, status: 'IN_PROGRESS' } : o); this.toast.success(this.transloco.translate('ws.cancelReviewSuccess')); this.analytics.track('translator_review_cancelled'); },
       error: (err: HttpErrorResponse) => this.toast.error(err.error?.message || this.transloco.translate('common.error')),
     });
   }
@@ -375,7 +378,7 @@ export class TranslatorWorkspaceComponent implements OnInit {
   flagSuspect() {
     this.showFlagDialog.set(false);
     this.api.post('/api/v1/translator/orders/' + this.orderId + '/flag-suspect', { documentId: this.orderId, description: 'Document flagged as suspect' }).subscribe({
-      next: () => this.toast.success(this.transloco.translate('ws.flagSuccess')),
+      next: () => { this.toast.success(this.transloco.translate('ws.flagSuccess')); this.analytics.track('translator_order_flagged'); },
       error: (err: HttpErrorResponse) => this.toast.error(err.error?.message || this.transloco.translate('common.error')),
     });
   }

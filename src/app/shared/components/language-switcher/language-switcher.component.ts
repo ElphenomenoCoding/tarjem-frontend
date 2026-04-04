@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit, input } from '@angular/core';
 import { TranslocoService, TranslocoModule } from '@jsverse/transloco';
 import { DOCUMENT } from '@angular/common';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 interface LangOption {
   code: string;
@@ -98,6 +99,7 @@ export class LanguageSwitcherComponent implements OnInit {
   private static readonly STORAGE_KEY = 'tarjem_lang';
   private readonly translocoService = inject(TranslocoService);
   private readonly document = inject(DOCUMENT);
+  private readonly analytics = inject(AnalyticsService);
 
   /** Use inline mode (dropdown below button) instead of fixed FAB */
   inline = input(false);
@@ -134,6 +136,7 @@ export class LanguageSwitcherComponent implements OnInit {
   toggleDropdown(): void { this.isOpen.update(v => !v); }
 
   switchLanguage(lang: LangOption): void {
+    this.analytics.track('language_switched', { language: lang.code });
     localStorage.setItem(LanguageSwitcherComponent.STORAGE_KEY, lang.code);
     this.translocoService.setActiveLang(lang.code);
     this.activeLang.set(lang.code);

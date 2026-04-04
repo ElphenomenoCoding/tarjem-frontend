@@ -8,6 +8,7 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslateLangPipe } from '../../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 interface AvailableOrder {
   id: string; documentType: string; sourceLanguage: string; targetLanguage: string;
@@ -186,6 +187,7 @@ export class AvailableOrdersComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   loading = signal(true);
   orders = signal<AvailableOrder[]>([]);
@@ -244,6 +246,7 @@ export class AvailableOrdersComponent implements OnInit {
         this.claiming.set(null);
         this.ongoingCount.update(c => c + 1);
         this.toast.success(this.transloco.translate('availableOrders.claimSuccess'));
+        this.analytics.track('translator_order_claimed', { orderId: this.orderToClaim()?.id });
       },
       error: (err: HttpErrorResponse) => {
         this.claiming.set(null);

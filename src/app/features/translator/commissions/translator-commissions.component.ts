@@ -6,6 +6,7 @@ import { MainLayoutComponent } from '../../../shared/layouts/main-layout/main-la
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 interface WalletSummary { balance: number; totalEarned: number; totalWithdrawn: number; pendingWithdrawals: number; }
 interface WalletTransaction { id: string; type: string; amount: number; balanceAfter: number; description: string; referenceId: string; createdAt: string; }
@@ -228,6 +229,7 @@ export class TranslatorCommissionsComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   loading = signal(true);
   summary = signal<WalletSummary | null>(null);
@@ -297,6 +299,7 @@ export class TranslatorCommissionsComponent implements OnInit {
         this.withdrawAmount = 0;
         this.withdrawNote = '';
         this.toast.success(this.transloco.translate('wallet.withdrawSuccess'));
+        this.analytics.track('translator_withdrawal_requested');
         this.loadSummary();
         this.loadHistory();
       },

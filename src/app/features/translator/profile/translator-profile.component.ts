@@ -7,6 +7,7 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslateLangPipe } from '../../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 const WILAYAS: { value: string; label: string }[] = [
   { value: '01', label: 'Adrar' }, { value: '02', label: 'Chlef' }, { value: '03', label: 'Laghouat' },
@@ -341,6 +342,7 @@ export class TranslatorProfileComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   saving = signal(false);
   saved = signal(false);
@@ -436,6 +438,7 @@ export class TranslatorProfileComponent implements OnInit {
         this.selectedNewSource.set(null);
         this.loadLanguagePairs();
         this.toast.success(this.transloco.translate('profile.pairRequested'));
+        this.analytics.track('translator_language_pair_added');
       },
       error: (err: HttpErrorResponse) => {
         this.requestingPair.set(false);
@@ -458,6 +461,7 @@ export class TranslatorProfileComponent implements OnInit {
       next: () => {
         this.loadLanguagePairs();
         this.toast.success(this.transloco.translate('profile.lpRemoved'));
+        this.analytics.track('translator_language_pair_removed');
       },
       error: (err: HttpErrorResponse) => {
         const msg = err.error?.message || this.transloco.translate('common.error');
@@ -498,6 +502,7 @@ export class TranslatorProfileComponent implements OnInit {
         this.saved.set(true);
         if (res.data) this.profile.set(res.data);
         this.toast.success(this.transloco.translate('common.saved'));
+        this.analytics.track('profile_saved', { role: 'translator' });
         setTimeout(() => this.saved.set(false), 3000);
       },
       error: () => {

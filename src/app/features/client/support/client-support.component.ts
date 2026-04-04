@@ -9,6 +9,7 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { TranslateLangPipe } from '../../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 interface Ticket {
   id: string;
@@ -334,6 +335,7 @@ export class ClientSupportComponent implements OnInit, AfterViewChecked {
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly notifService = inject(NotificationService);
+  private readonly analytics = inject(AnalyticsService);
 
   // Live SSE: append incoming ticket messages to chat
   private liveMessageEffect = effect(() => {
@@ -474,6 +476,7 @@ export class ClientSupportComponent implements OnInit, AfterViewChecked {
         this.sendingMessage.set(false);
         this.shouldScroll = true;
         this.toast.success(this.transloco.translate('ticket.messageSent'));
+        this.analytics.track('support_message_sent');
       },
       error: (err: HttpErrorResponse) => {
         this.sendingMessage.set(false);
@@ -497,6 +500,7 @@ export class ClientSupportComponent implements OnInit, AfterViewChecked {
         this.createDescription = '';
         this.createOrderId = '';
         this.toast.success(this.transloco.translate('ticket.created'));
+        this.analytics.track('support_ticket_created');
         this.loadTickets();
         if (res.data) {
           this.selectTicket(res.data);
@@ -523,6 +527,7 @@ export class ClientSupportComponent implements OnInit, AfterViewChecked {
           this.selectedTicket.update(t => t ? { ...t, status: 'CLOSED' } : null);
         }
         this.toast.success(this.transloco.translate('ticket.closed'));
+        this.analytics.track('support_ticket_closed');
         this.loadTickets();
       },
       error: (err: HttpErrorResponse) => {

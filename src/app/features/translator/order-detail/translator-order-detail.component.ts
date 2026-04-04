@@ -8,6 +8,7 @@ import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { TranslateLangPipe } from '../../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 interface Order {
   id: string; documentType: string; sourceLanguage: string; targetLanguage: string;
@@ -153,6 +154,7 @@ export class TranslatorOrderDetailComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly t = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   loading = signal(true);
   claiming = signal(false);
@@ -181,6 +183,7 @@ export class TranslatorOrderDetailComponent implements OnInit {
       next: () => {
         this.claiming.set(false);
         this.toast.success(this.t.translate('availableOrders.claimSuccess'));
+        this.analytics.track('translator_order_claimed');
         this.router.navigate(['/translator/orders', id, 'workspace']);
       },
       error: (err: HttpErrorResponse) => {

@@ -5,6 +5,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import { LanguageSwitcherComponent } from '../../../shared/components/language-switcher/language-switcher.component';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 @Component({
   selector: 'app-verify-email',
@@ -108,6 +109,7 @@ export class VerifyEmailComponent {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   loading = signal(false);
   resending = signal(false);
@@ -125,6 +127,7 @@ export class VerifyEmailComponent {
       next: () => {
         this.loading.set(false);
         this.verified.set(true);
+        this.analytics.track('email_verified');
         this.toast.success(this.transloco.translate('auth.emailVerified'));
         setTimeout(() => {
           const role = this.authService.currentUser()?.role;
@@ -144,6 +147,7 @@ export class VerifyEmailComponent {
       },
       error: (err) => {
         this.loading.set(false);
+        this.analytics.track('email_verify_failed');
         const msg = err?.error?.message || this.transloco.translate('auth.emailNotVerified');
         this.toast.error(msg);
       },
@@ -152,6 +156,7 @@ export class VerifyEmailComponent {
 
   resend(): void {
     this.resending.set(true);
+    this.analytics.track('verification_code_resent');
     this.authService.resendVerification().subscribe({
       next: () => {
         this.resending.set(false);

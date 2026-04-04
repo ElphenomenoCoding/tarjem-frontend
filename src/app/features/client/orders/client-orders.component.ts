@@ -9,6 +9,7 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslateLangPipe } from '../../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 interface Order {
   id: string;
@@ -216,6 +217,7 @@ export class ClientOrdersComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
   private readonly router = inject(Router);
+  private readonly analytics = inject(AnalyticsService);
 
   loading = signal(true);
   allOrders = signal<Order[]>([]);
@@ -315,7 +317,7 @@ export class ClientOrdersComponent implements OnInit {
     if (!order || !this.reportConfirmed || !this.reportMessage.trim() || !this.reportSubject.trim()) return;
     this.submittingReport.set(true);
     this.api.post('/api/v1/client/tickets', { orderId: order.id, subject: this.reportSubject, description: this.reportMessage }).subscribe({
-      next: () => { this.submittingReport.set(false); this.showReportDialog.set(false); this.toast.success(this.transloco.translate('clientOrders.reportSuccess')); order.hasOpenTicket = true; this.applyFilters(); },
+      next: () => { this.submittingReport.set(false); this.showReportDialog.set(false); this.toast.success(this.transloco.translate('clientOrders.reportSuccess')); this.analytics.track('support_ticket_created'); order.hasOpenTicket = true; this.applyFilters(); },
       error: (err: HttpErrorResponse) => { this.submittingReport.set(false); this.toast.error(err.error?.message || this.transloco.translate('common.error')); },
     });
   }

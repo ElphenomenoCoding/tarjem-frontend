@@ -7,6 +7,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import { LanguageSwitcherComponent } from '../../../shared/components/language-switcher/language-switcher.component';
 import { TranslateLangPipe } from '../../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 @Component({
   selector: 'app-login',
@@ -311,6 +312,7 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   loading = signal(false);
   showPassword = signal(false);
@@ -340,12 +342,14 @@ export class LoginComponent {
     }
 
     this.loading.set(true);
+    this.analytics.track('login_attempted');
 
     const { email, password } = this.form.getRawValue();
 
     this.authService.login(email, password).subscribe({
       next: (res) => {
         this.loading.set(false);
+        this.analytics.track('login_succeeded', { role: res.data.role });
         this.toast.success(this.transloco.translate('auth.login.welcomeBack'));
 
         // Redirect unverified users to verification page
@@ -380,6 +384,7 @@ export class LoginComponent {
       },
       error: (err) => {
         this.loading.set(false);
+        this.analytics.track('login_failed', { error: err?.error?.message });
         const message = err?.error?.message || this.transloco.translate('auth.login.error');
         this.toast.error(message);
       },

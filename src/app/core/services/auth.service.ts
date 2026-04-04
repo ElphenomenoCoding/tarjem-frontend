@@ -1,7 +1,8 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
+import { AnalyticsService } from './analytics.service';
 
 export interface AuthResponse {
   accessToken: string;
@@ -48,10 +49,17 @@ export class AuthService {
   isAuthenticated = computed(() => !!this.currentUser());
   userRole = computed(() => this.currentUser()?.role ?? null);
 
+  private readonly analytics = inject(AnalyticsService);
+
   constructor(
     private readonly http: HttpClient,
     private readonly router: Router,
-  ) {}
+  ) {
+    const user = this.currentUser();
+    if (user) {
+      this.analytics.identify(user.userId, { email: user.email, role: user.role, name: `${user.firstName} ${user.lastName}` });
+    }
+  }
 
   registerClient(data: Record<string, string>): Observable<BaseApiResponse<AuthResponse>> {
     return this.http
@@ -72,6 +80,7 @@ export class AuthService {
   }
 
   logout(): void {
+    this.analytics.reset();
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.REFRESH_KEY);
     localStorage.removeItem(this.USER_KEY);
@@ -122,6 +131,7 @@ export class AuthService {
     localStorage.setItem(this.REFRESH_KEY, auth.refreshToken);
     localStorage.setItem(this.USER_KEY, JSON.stringify(auth));
     this.currentUser.set(auth);
+    this.analytics.identify(auth.userId, { email: auth.email, role: auth.role, name: `${auth.firstName} ${auth.lastName}` });
   }
 
   private loadUser(): AuthResponse | null {

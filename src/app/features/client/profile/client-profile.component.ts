@@ -5,6 +5,7 @@ import { MainLayoutComponent } from '../../../shared/layouts/main-layout/main-la
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 const WILAYAS: { value: string; label: string }[] = [
   { value: '01', label: 'Adrar' }, { value: '02', label: 'Chlef' }, { value: '03', label: 'Laghouat' },
@@ -214,6 +215,7 @@ export class ClientProfileComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   saving = signal(false);
   profileSaved = signal(false);
@@ -283,6 +285,7 @@ export class ClientProfileComponent implements OnInit {
         this.profileSaved.set(true);
         if (res.data) this.profile.set(res.data);
         this.toast.success(this.transloco.translate('common.saved'));
+        this.analytics.track('profile_saved', { role: 'client' });
         setTimeout(() => this.profileSaved.set(false), 3000);
       },
       error: (err: HttpErrorResponse) => {
@@ -308,6 +311,7 @@ export class ClientProfileComponent implements OnInit {
         this.newPassword = '';
         this.confirmPassword = '';
         this.toast.success(this.transloco.translate('profile.passwordChanged'));
+        this.analytics.track('password_changed', { role: 'client' });
       },
       error: (err: HttpErrorResponse) => {
         this.changingPassword.set(false);

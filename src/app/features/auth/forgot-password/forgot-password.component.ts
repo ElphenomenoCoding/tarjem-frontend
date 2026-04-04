@@ -5,6 +5,7 @@ import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { ApiService } from '../../../core/services/api.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import { LanguageSwitcherComponent } from '../../../shared/components/language-switcher/language-switcher.component';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -128,6 +129,7 @@ export class ForgotPasswordComponent {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   step = signal(1);
   loading = signal(false);
@@ -145,6 +147,7 @@ export class ForgotPasswordComponent {
   sendResetCode() {
     if (this.emailForm.invalid) return;
     this.loading.set(true);
+    this.analytics.track('password_reset_requested');
     const email = this.emailForm.getRawValue().email;
 
     this.api.post<any>('/api/v1/auth/forgot-password', { email }).subscribe({
@@ -171,6 +174,7 @@ export class ForgotPasswordComponent {
     this.api.post<any>('/api/v1/auth/reset-password', { token, email, newPassword }).subscribe({
       next: () => {
         this.loading.set(false);
+        this.analytics.track('password_reset_completed');
         this.toast.success(this.transloco.translate('auth.passwordResetSuccess'));
         this.router.navigate(['/auth/login']);
       },

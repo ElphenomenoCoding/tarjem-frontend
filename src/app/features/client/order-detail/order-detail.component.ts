@@ -11,6 +11,7 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslateLangPipe } from '../../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 interface OrderData {
   id: string; clientId: string; translatorId: string;
@@ -424,6 +425,7 @@ export class OrderDetailComponent implements OnInit {
   private readonly location = inject(Location);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   loading = signal(true);
   order = signal<OrderData | null>(null);
@@ -544,7 +546,7 @@ export class OrderDetailComponent implements OnInit {
     const id = this.order()?.id;
     if (!id) return;
     this.api.delete('/api/v1/client/orders/' + id + '/documents').subscribe({
-      next: () => { this.documents.set([]); this.toast.success(this.transloco.translate('orderDetail.eraseSuccess')); },
+      next: () => { this.documents.set([]); this.toast.success(this.transloco.translate('orderDetail.eraseSuccess')); this.analytics.track('documents_erased'); },
       error: (err: HttpErrorResponse) => this.toast.error(err.error?.message || this.transloco.translate('common.error')),
     });
   }
@@ -565,6 +567,7 @@ export class OrderDetailComponent implements OnInit {
         const ticketId = res.data?.id;
         if (ticketId) this.existingTicketId.set(ticketId);
         this.toast.success(this.transloco.translate('clientOrders.reportSuccess'));
+        this.analytics.track('support_ticket_created');
         // If appending to existing ticket, redirect to support chat
         if (this.existingTicketId()) {
           this.router.navigate(['/client/support'], { queryParams: { ticket: this.existingTicketId() } });
@@ -578,7 +581,7 @@ export class OrderDetailComponent implements OnInit {
     const id = this.order()?.id;
     if (!id || !this.reviewReason.trim()) return;
     this.api.post('/api/v1/client/orders/' + id + '/review-request', { reason: this.reviewReason }).subscribe({
-      next: () => { this.showReviewModal.set(false); this.hasOpenTicket.set(true); this.toast.success(this.transloco.translate('orderDetail.reviewSuccess')); },
+      next: () => { this.showReviewModal.set(false); this.hasOpenTicket.set(true); this.toast.success(this.transloco.translate('orderDetail.reviewSuccess')); this.analytics.track('review_requested'); },
       error: (err: HttpErrorResponse) => this.toast.error(err.error?.message || this.transloco.translate('common.error')),
     });
   }
@@ -591,6 +594,7 @@ export class OrderDetailComponent implements OnInit {
       .subscribe({
         next: () => {
           this.toast.success(this.transloco.translate('orderDetail.orderCancelled'));
+          this.analytics.track('order_cancelled');
           this.loadOrder();
         },
         error: (err: any) => this.toast.error(err?.error?.message || this.transloco.translate('common.error'))
@@ -629,6 +633,7 @@ export class OrderDetailComponent implements OnInit {
         this.order.update(o => o ? { ...o, status: 'PENDING_DELIVERY' } : o);
         if (res.data) this.delivery.set(res.data);
         this.toast.success(this.transloco.translate('delivery.requested'));
+        this.analytics.track('delivery_requested');
       },
       error: (err: HttpErrorResponse) => this.toast.error(err.error?.message || this.transloco.translate('common.error')),
     });
@@ -642,6 +647,7 @@ export class OrderDetailComponent implements OnInit {
       next: () => {
         this.order.update(o => o ? { ...o, status: 'DELIVERED' } : o);
         this.toast.success(this.transloco.translate('delivery.receiptConfirmed'));
+        this.analytics.track('receipt_confirmed');
       },
       error: (err: HttpErrorResponse) => this.toast.error(err.error?.message || this.transloco.translate('common.error')),
     });
@@ -656,6 +662,7 @@ export class OrderDetailComponent implements OnInit {
         this.ratingSubmitting.set(false);
         if (res.data) this.existingRating.set(res.data);
         this.toast.success(this.transloco.translate('rating.submitted'));
+        this.analytics.track('rating_submitted', { rating: this.selectedRating() });
       },
       error: (err: HttpErrorResponse) => { this.ratingSubmitting.set(false); this.toast.error(err.error?.message || this.transloco.translate('common.error')); },
     });

@@ -8,6 +8,7 @@ import { Subject, debounceTime } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { LanguageSwitcherComponent } from '../../shared/components/language-switcher/language-switcher.component';
 import { TranslateLangPipe } from '../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../core/services/analytics.service';
 
 interface CascadeTarget { name: string; countryCode: string; }
 interface CascadeLanguage { name: string; countryCode: string; targets: CascadeTarget[]; }
@@ -442,6 +443,7 @@ export class EstimatorComponent implements OnInit, OnDestroy {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly analytics = inject(AnalyticsService);
 
   // Data signals
   cascadeLanguages = signal<CascadeLanguage[]>([]);
@@ -537,6 +539,7 @@ export class EstimatorComponent implements OnInit, OnDestroy {
         const data = res?.data ?? res;
         this.quote.set(data);
         this.calculating.set(false);
+        this.analytics.track('estimator_quote_calculated', { source: this.selectedSource, target: this.selectedTarget, pages: this.pageCount, tier: this.tier, price: data?.totalPrice });
       },
       error: () => {
         this.calculating.set(false);
@@ -566,6 +569,7 @@ export class EstimatorComponent implements OnInit, OnDestroy {
   }
 
   orderNow(): void {
+    this.analytics.track('estimator_order_now', { source: this.selectedSource, target: this.selectedTarget, price: this.quote()?.totalPrice });
     const estimate = {
       sourceLanguage: this.selectedSource,
       targetLanguage: this.selectedTarget,

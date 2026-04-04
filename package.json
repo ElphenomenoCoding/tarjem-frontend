@@ -20,6 +20,7 @@
     "@jsverse/transloco": "^8.2.1",
     "@tailwindcss/cli": "^4.2.2",
     "@tailwindcss/postcss": "^4.2.2",
+    "posthog-js": "^1.364.7",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.2.2",
     "tslib": "^2.3.0"

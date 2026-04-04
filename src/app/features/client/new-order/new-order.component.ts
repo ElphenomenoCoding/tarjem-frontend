@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, HostListener, ElementRef } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, HostListener, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DecimalPipe } from '@angular/common';
@@ -10,6 +10,7 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../../core/services/auth.service';
 import { TranslateLangPipe } from '../../../shared/pipes/translate-lang.pipe';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 interface CascadeTarget { name: string; countryCode: string; }
 interface CascadeLanguage { name: string; countryCode: string; targets: CascadeTarget[]; }
@@ -478,7 +479,7 @@ const WILAYAS = [
     </app-main-layout>
   `,
 })
-export class NewOrderComponent implements OnInit {
+export class NewOrderComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
@@ -486,6 +487,7 @@ export class NewOrderComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
   private readonly elRef = inject(ElementRef);
+  private readonly analytics = inject(AnalyticsService);
   Math = Math;
 
   @HostListener('document:click', ['$event'])
@@ -502,6 +504,7 @@ export class NewOrderComponent implements OnInit {
   currentStep = signal(0);
   submitting = signal(false);
   showConfirmDialog = signal(false);
+  private orderCompleted = false;
 
   documentType = '';
   documentCategories = DOCUMENT_CATEGORIES;
@@ -648,6 +651,7 @@ export class NewOrderComponent implements OnInit {
       this.generatePreviews(all);
       // Analyze ALL files to get accurate page count
       this.analyzeFiles(all);
+      this.analytics.track('document_uploaded', { fileCount: newFiles.length, totalFiles: all.length });
     }
     input.value = '';
   }
@@ -754,6 +758,11 @@ export class NewOrderComponent implements OnInit {
   submitOrder() {
     this.showConfirmDialog.set(false);
     this.submitting.set(true);
+    this.analytics.track('order_submitted', {
+      documentType: this.documentType, sourceLanguage: this.sourceLanguage, targetLanguage: this.targetLanguage,
+      urgency: this.urgency, tier: this.tier, pageCount: this.pageCount, fileCount: this.selectedFiles().length,
+      totalPrice: this.quote()?.totalPrice,
+    });
     const body: any = {
       documentType: this.documentType, sourceLanguage: this.sourceLanguage, targetLanguage: this.targetLanguage,
       tier: this.tier, pageCount: this.pageCount, clientNotes: this.clientNotes || null,
@@ -772,7 +781,7 @@ export class NewOrderComponent implements OnInit {
         if (orderId && this.selectedFiles().length > 0) this.uploadFilesSequentially(orderId, 0);
         else this.done(orderId);
       },
-      error: (err: HttpErrorResponse) => { this.submitting.set(false); this.toast.error(err.error?.message || this.transloco.translate('common.error')); },
+      error: (err: HttpErrorResponse) => { this.submitting.set(false); this.analytics.track('order_failed', { error: err.error?.message }); this.toast.error(err.error?.message || this.transloco.translate('common.error')); },
     });
   }
 
@@ -785,5 +794,11 @@ export class NewOrderComponent implements OnInit {
     });
   }
 
-  private done(orderId: string) { this.submitting.set(false); this.toast.success(this.transloco.translate('newOrder.success')); this.router.navigate(['/client/orders', orderId]); }
+  private done(orderId: string) { this.submitting.set(false); this.orderCompleted = true; this.analytics.track('order_completed', { orderId }); this.toast.success(this.transloco.translate('newOrder.success')); this.router.navigate(['/client/orders', orderId]); }
+
+  ngOnDestroy(): void {
+    if (!this.orderCompleted && this.currentStep() > 0) {
+      this.analytics.track('order_abandoned', { step: this.currentStep(), documentType: this.documentType, sourceLanguage: this.sourceLanguage, targetLanguage: this.targetLanguage });
+    }
+  }
 }

@@ -6,6 +6,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
 import { LanguageSwitcherComponent } from '../../../shared/components/language-switcher/language-switcher.component';
 import type { SelectOption } from '../../../shared/components/select/select.component';
+import { AnalyticsService } from '../../../core/services/analytics.service';
 
 const WILAYAS: SelectOption[] = [
   { value: '01', label: 'Adrar' }, { value: '02', label: 'Chlef' }, { value: '03', label: 'Laghouat' },
@@ -435,6 +436,7 @@ export class RegisterTranslatorComponent {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly transloco = inject(TranslocoService);
+  private readonly analytics = inject(AnalyticsService);
 
   loading = signal(false);
   showPassword = signal(false);
@@ -475,12 +477,13 @@ export class RegisterTranslatorComponent {
       control.markAsTouched();
       if (control.invalid) valid = false;
     }
-    if (valid) this.currentStep.set(step);
+    if (valid) { this.analytics.track('register_translator_step', { step }); this.currentStep.set(step); }
   }
 
   onSubmit(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.loading.set(true);
+    this.analytics.track('register_translator_submitted', { wilaya: this.form.getRawValue().wilaya, specializations: this.form.getRawValue().specializations });
 
     const formValue = this.form.getRawValue();
     const payload: Record<string, string> = {
@@ -495,11 +498,13 @@ export class RegisterTranslatorComponent {
         localStorage.removeItem('tarjem_token');
         localStorage.removeItem('tarjem_refresh');
         localStorage.removeItem('tarjem_user');
+        this.analytics.track('register_translator_succeeded');
         this.toast.success(this.transloco.translate('auth.registerTranslator.pendingMessage'));
         this.router.navigate(['/auth/login']);
       },
       error: (err) => {
         this.loading.set(false);
+        this.analytics.track('register_translator_failed', { error: err?.error?.message });
         this.toast.error(err?.error?.message || this.transloco.translate('auth.registerTranslator.error'));
       },
     });
